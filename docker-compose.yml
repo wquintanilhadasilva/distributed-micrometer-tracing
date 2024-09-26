@@ -1,0 +1,78 @@
+version: '3.3'
+
+services:
+
+  customerOne:
+    image: spring-boot-3-and-distributed-tracing-one:0.0.1-SNAPSHOT
+    hostname: customerOne
+    deploy:
+      resources:
+        limits:
+          cpus: '0.4'
+          memory: '0.5GB'
+    environment:
+      - CUSTOMER_DETAILS_HOST=http://customer-detail:8080
+    networks:
+      - app-network
+
+  customerTwo:
+    image: spring-boot-3-and-distributed-tracing-one:0.0.1-SNAPSHOT
+    hostname: customerTwo
+    deploy:
+      resources:
+        limits:
+          cpus: '0.4'
+          memory: '0.5GB'
+    environment:
+      - CUSTOMER_DETAILS_HOST=http://customer-detail:8080
+      - ZIPKIN_ENDPOINT=http://zipkin:9411/api/v2/spans
+    networks:
+      - app-network      
+
+  customerDetail:
+    image: spring-boot-3-and-distributed-tracing-two:0.0.1-SNAPSHOT
+    hostname: customer-detail
+    deploy:
+      resources:
+        limits:
+          cpus: '0.4'
+          memory: '0.5GB'
+    environment:
+      - ZIPKIN_ENDPOINT=http://zipkin:9411/api/v2/spans
+    networks:
+      - app-network
+
+  zipkin:
+    image: openzipkin/zipkin
+    hostname: zipkin
+    deploy:
+      resources:
+        limits:
+          cpus: '0.3'
+          memory: '0.5GB'
+    ports:
+      - "9411:9411"
+    networks:
+      - app-network
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - customerOne
+      - customerTwo
+      - customerDetail
+    ports:
+      - "9999:9999"
+    networks:
+      - app-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.4'
+          memory: '256MB'
+
+networks:
+  app-network:
